@@ -1,5 +1,6 @@
 package com.riwi.io.coopcredit_credit_application_service.infrastructure.entry_points.api.rest.handler;
 
+import org.springframework.dao.DataIntegrityViolationException; // Import this
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -35,6 +36,15 @@ public class GlobalExceptionHandler {
                 errors.put(error.getField(), error.getDefaultMessage()));
         problemDetail.setProperty("errors", errors);
 
+        return problemDetail;
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class) // New handler for data integrity issues
+    public ProblemDetail handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Data integrity violation: " + ex.getMostSpecificCause().getMessage());
+        problemDetail.setTitle("Data Conflict");
+        problemDetail.setType(URI.create("https://example.com/problems/data-conflict"));
+        problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
 

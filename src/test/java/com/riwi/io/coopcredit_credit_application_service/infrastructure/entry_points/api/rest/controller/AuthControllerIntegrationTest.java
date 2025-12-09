@@ -46,7 +46,7 @@ class AuthControllerIntegrationTest {
     @BeforeEach
     void setUp() {
         // Ensure the user does not exist before each test
-        userRepositoryPort.findByUsername("testuser").ifPresent(userRepositoryPort::deleteById);
+        userRepositoryPort.findByUsername("testuser").ifPresent(user -> userRepositoryPort.deleteById(user.getId())); // Corrected line
 
         registerRequest = RegisterUserRequest.builder()
                 .username("testuser")
