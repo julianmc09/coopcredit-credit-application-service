@@ -69,7 +69,7 @@ public class EvaluateCreditApplicationService implements EvaluateCreditApplicati
             throw new IllegalArgumentException("Credit application term must be a positive integer.");
         }
         BigDecimal monthlyPayment = creditApplication.getRequestedAmount().divide(new BigDecimal(creditApplication.getTerm()), 2, RoundingMode.HALF_UP);
-        BigDecimal maxAllowedMonthlyPayment = affiliate.getSalary().multiply(MAX_QUOTA_INCOME_RATIO);
+        BigDecimal maxAllowedMonthlyPayment = affiliate.getSalary().multiply(MAX_QUOTA_INCOME_RATIO).setScale(2, RoundingMode.HALF_UP); // Corrected here
 
         if (monthlyPayment.compareTo(maxAllowedMonthlyPayment) > 0) {
             isApproved = false;
