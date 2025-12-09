@@ -8,12 +8,12 @@ import org.mapstruct.MappingConstants;
 
 import java.util.List;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {RoleMapper.class})
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING) // Removed uses = {RoleMapper.class}
 public interface UserMapper {
-    @Mapping(source = "role", target = "role")
+    @Mapping(source = "role.name", target = "role") // Map RoleEntity's name (the enum) to User's role
     User toDomain(UserEntity entity);
 
-    @Mapping(source = "role", target = "role")
+    @Mapping(target = "role", ignore = true) // UserJpaAdapter sets the RoleEntity
     UserEntity toEntity(User domain);
 
     List<User> toDomainList(List<UserEntity> entities);
