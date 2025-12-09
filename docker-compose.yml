@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Juli321512699.
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  risk-central-mock-service:
+    build:
+      context: ../coopcredit-risk-central-mock-service # Assuming mock service is in a sibling directory
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker # Optional: if you have a specific profile for Docker
+    depends_on:
+      - db # Depends on db, but doesn't directly use it in this mock example
+
+  credit-application-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Juli321512699.
+      RISK_CENTRAL_BASE_URL: http://risk-central-mock-service:8081
+      JWT_SECRET_KEY: p0xvM3NQd1JrN1F6R2F4OE1zWmZ6V2RpV0x4N1d3Z0dyS2duc2pGVlZ6T0d6d0p4R2tXaVNQajQ9
+      SPRING_PROFILES_ACTIVE: docker # Optional: if you have a specific profile for Docker
+    depends_on:
+      - db
+      - risk-central-mock-service
+
+volumes:
+  db_data:
