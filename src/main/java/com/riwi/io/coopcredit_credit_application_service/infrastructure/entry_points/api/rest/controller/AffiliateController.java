@@ -6,6 +6,7 @@ import com.riwi.io.coopcredit_credit_application_service.domain.ports.in.UpdateA
 import com.riwi.io.coopcredit_credit_application_service.infrastructure.entry_points.api.rest.dto.request.AffiliateRequest;
 import com.riwi.io.coopcredit_credit_application_service.infrastructure.entry_points.api.rest.dto.response.AffiliateResponse;
 import com.riwi.io.coopcredit_credit_application_service.infrastructure.entry_points.api.rest.mapper.AffiliateRestMapper;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement; // Import SecurityRequirement
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/affiliates")
 @AllArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication") // Apply SecurityRequirement here
 public class AffiliateController {
 
     private final RegisterAffiliateUseCase registerAffiliateUseCase;
