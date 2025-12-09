@@ -32,7 +32,14 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll() // Allow public access to auth, swagger, and actuator
+                        .requestMatchers(
+                                "/auth/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html", // Specific for the main page
+                                "/v3/api-docs/**",
+                                "/webjars/**",
+                                "/actuator/**"
+                        ).permitAll() // Allow public access to auth, swagger, and actuator
                         .anyRequest().authenticated() // All other requests require authentication
                 )
                 .sessionManagement(session -> session
