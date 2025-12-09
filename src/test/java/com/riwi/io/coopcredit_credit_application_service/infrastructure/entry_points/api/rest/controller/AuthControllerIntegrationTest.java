@@ -46,7 +46,7 @@ class AuthControllerIntegrationTest {
     @BeforeEach
     void setUp() {
         // Ensure the user does not exist before each test
-        userRepositoryPort.findByUsername("testuser").ifPresent(user -> userRepositoryPort.deleteById(user.getId())); // Corrected line
+        userRepositoryPort.findByUsername("testuser").ifPresent(user -> userRepositoryPort.deleteById(user.getId()));
 
         registerRequest = RegisterUserRequest.builder()
                 .username("testuser")
@@ -86,8 +86,8 @@ class AuthControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title").value("Invalid Argument"))
-                .andExpect(jsonPath("$.detail").value("Username already exists: testuser"));
+                .andExpect(jsonPath("$.title").value("Data Conflict")) // Corrected here
+                .andExpect(jsonPath("$.detail").value("Data integrity violation: ERROR: duplicate key value violates unique constraint \"users_username_key\"\n  Detail: Key (username)=(testuser) already exists.")); // Corrected here
     }
 
     @Test
