@@ -36,4 +36,9 @@ public class UserJpaAdapter implements UserRepositoryPort {
     public Optional<User> findByUsername(String username) {
         return userJpaRepository.findByUsername(username).map(userMapper::toDomain);
     }
+
+    @Override
+    public void deleteById(String id) {
+        userJpaRepository.deleteById(id);
+    }
 }
