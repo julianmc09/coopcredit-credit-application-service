@@ -12,18 +12,24 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck: # Added healthcheck
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   risk-central-mock-service:
     build:
-      context: ../coopcredit-risk-central-mock-service # Assuming mock service is in a sibling directory
+      context: ../coopcredit-risk-central-mock-service
       dockerfile: Dockerfile
     restart: always
     ports:
       - "8081:8081"
     environment:
-      SPRING_PROFILES_ACTIVE: docker # Optional: if you have a specific profile for Docker
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - db # Depends on db, but doesn't directly use it in this mock example
+      db:
+        condition: service_healthy # Wait until db is healthy
 
   credit-application-service:
     build:
@@ -38,10 +44,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: Juli321512699.
       RISK_CENTRAL_BASE_URL: http://risk-central-mock-service:8081
       JWT_SECRET_KEY: p0xvM3NQd1JrN1F6R2F4OE1zWmZ6V2RpV0x4N1d3Z0dyS2duc2pGVlZ6T0d6d0p4R2tXaVNQajQ9
-      SPRING_PROFILES_ACTIVE: docker # Optional: if you have a specific profile for Docker
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      - db
-      - risk-central-mock-service
+      db:
+        condition: service_healthy # Wait until db is healthy
+      risk-central-mock-service:
+        condition: service_started # Wait until mock service has started
 
 volumes:
   db_data:
