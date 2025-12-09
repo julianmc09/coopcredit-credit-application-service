@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.2.5</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/> <!-- lookup from repository -->
 	</parent>
 	<groupId>com.riwi.io</groupId>
 	<artifactId>coopcredit-credit-application-service</artifactId>
@@ -29,7 +29,7 @@
 	<properties>
 		<java.version>17</java.version>
 		<org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
-		<lombok.version>1.18.30</lombok.version> <!-- Added Lombok version -->
+		<lombok.version>1.18.30</lombok.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -71,7 +71,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<optional>true</optional>
+			<optional>true</optional> <!-- Reverted to optional=true -->
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -146,7 +146,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.8.1</version>
+				<version>3.8.1</version> <!-- Reverted to 3.8.1 -->
 				<configuration>
 					<source>17</source>
 					<target>17</target>
