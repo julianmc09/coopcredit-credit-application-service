@@ -1,6 +1,7 @@
 package com.riwi.io.coopcredit_credit_application_service.infrastructure.configuration.security;
 
 import com.riwi.io.coopcredit_credit_application_service.infrastructure.configuration.security.jwt.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse; // Import this
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,7 +47,12 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Stateless session for JWT
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint((request, response, authException) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")
+                        )
+                ); // Added custom AuthenticationEntryPoint
 
         return http.build();
     }
