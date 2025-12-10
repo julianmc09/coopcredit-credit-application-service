@@ -16,4 +16,6 @@ public interface AffiliateRepositoryPort {
     void deleteById(String id);
 
     Optional<Affiliate> findByDocument(String document);
+
+    void deleteAll(); // Added this method
 }

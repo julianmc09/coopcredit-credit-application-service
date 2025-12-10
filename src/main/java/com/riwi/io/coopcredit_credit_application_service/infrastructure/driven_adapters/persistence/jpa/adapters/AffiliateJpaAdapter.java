@@ -43,4 +43,9 @@ public class AffiliateJpaAdapter implements AffiliateRepositoryPort {
     public Optional<Affiliate> findByDocument(String document) {
         return affiliateJpaRepository.findByDocument(document).map(affiliateMapper::toDomain);
     }
+
+    @Override
+    public void deleteAll() {
+        affiliateJpaRepository.deleteAll();
+    }
 }

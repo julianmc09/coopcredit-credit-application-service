@@ -10,5 +10,7 @@ public interface UserRepositoryPort {
 
     Optional<User> findByUsername(String username);
 
-    void deleteById(String id); // Added this method
+    void deleteById(String id);
+
+    void deleteAll(); // Added this method
 }

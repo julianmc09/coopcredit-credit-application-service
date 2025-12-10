@@ -41,4 +41,9 @@ public class UserJpaAdapter implements UserRepositoryPort {
     public void deleteById(String id) {
         userJpaRepository.deleteById(id);
     }
+
+    @Override
+    public void deleteAll() {
+        userJpaRepository.deleteAll();
+    }
 }
