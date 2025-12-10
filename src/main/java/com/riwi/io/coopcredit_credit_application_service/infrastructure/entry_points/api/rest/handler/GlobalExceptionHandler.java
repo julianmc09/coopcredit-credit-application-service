@@ -1,8 +1,9 @@
 package com.riwi.io.coopcredit_credit_application_service.infrastructure.entry_points.api.rest.handler;
 
-import org.springframework.dao.DataIntegrityViolationException; // Import this
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.authentication.BadCredentialsException; // Import this
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -39,11 +40,20 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
-    @ExceptionHandler(DataIntegrityViolationException.class) // New handler for data integrity issues
+    @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Data integrity violation: " + ex.getMostSpecificCause().getMessage());
         problemDetail.setTitle("Data Conflict");
         problemDetail.setType(URI.create("https://example.com/problems/data-conflict"));
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(BadCredentialsException.class) // New handler for bad credentials
+    public ProblemDetail handleBadCredentialsException(BadCredentialsException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+        problemDetail.setTitle("Unauthorized");
+        problemDetail.setType(URI.create("https://example.com/problems/unauthorized"));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }

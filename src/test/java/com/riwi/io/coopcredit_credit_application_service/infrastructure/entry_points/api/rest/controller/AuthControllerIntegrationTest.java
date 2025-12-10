@@ -19,6 +19,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,20 +44,23 @@ class AuthControllerIntegrationTest {
 
     private RegisterUserRequest registerRequest;
     private LoginRequest loginRequest;
+    private String uniqueUsername;
 
     @BeforeEach
     void setUp() {
-        // Ensure the user does not exist before each test
-        userRepositoryPort.findByUsername("testuser").ifPresent(user -> userRepositoryPort.deleteById(user.getId()));
+        uniqueUsername = "testuser-" + UUID.randomUUID().toString(); // Generate unique username
+
+        // Ensure the user does not exist before each test (using the unique username)
+        userRepositoryPort.findByUsername(uniqueUsername).ifPresent(user -> userRepositoryPort.deleteById(user.getId()));
 
         registerRequest = RegisterUserRequest.builder()
-                .username("testuser")
+                .username(uniqueUsername)
                 .password("password123")
                 .role(Role.ROLE_AFILIADO)
                 .build();
 
         loginRequest = LoginRequest.builder()
-                .username("testuser")
+                .username(uniqueUsername)
                 .password("password123")
                 .build();
     }
@@ -67,16 +72,16 @@ class AuthControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("testuser"))
+                .andExpect(jsonPath("$.username").value(uniqueUsername))
                 .andExpect(jsonPath("$.role").value("ROLE_AFILIADO"));
     }
 
     @Test
     @DisplayName("Should not register user if username already exists")
     void shouldNotRegisterUserIfUsernameAlreadyExists() throws Exception {
-        // First register the user
+        // First register the user directly to ensure it exists for the conflict test
         userRepositoryPort.save(User.builder()
-                .id("some-id")
+                .id(UUID.randomUUID().toString()) // Unique ID
                 .username(registerRequest.getUsername())
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
                 .role(registerRequest.getRole())
@@ -86,16 +91,16 @@ class AuthControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title").value("Data Conflict")) // Corrected here
-                .andExpect(jsonPath("$.detail").value("Data integrity violation: ERROR: duplicate key value violates unique constraint \"users_username_key\"\n  Detail: Key (username)=(testuser) already exists.")); // Corrected here
+                .andExpect(jsonPath("$.title").value("Invalid Argument")) // Corrected assertion back to "Invalid Argument"
+                .andExpect(jsonPath("$.detail").value("Username already exists: " + uniqueUsername)); // Corrected assertion
     }
 
     @Test
     @DisplayName("Should log in user successfully and return JWT token")
     void shouldLoginUserSuccessfullyAndReturnJwtToken() throws Exception {
-        // Register user first
+        // Register user first directly for this test
         userRepositoryPort.save(User.builder()
-                .id("some-id")
+                .id(UUID.randomUUID().toString()) // Unique ID
                 .username(registerRequest.getUsername())
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
                 .role(registerRequest.getRole())
@@ -113,16 +118,16 @@ class AuthControllerIntegrationTest {
     @Test
     @DisplayName("Should not log in with invalid credentials")
     void shouldNotLoginWithInvalidCredentials() throws Exception {
-        // Register user first
+        // Register user first directly for this test
         userRepositoryPort.save(User.builder()
-                .id("some-id")
+                .id(UUID.randomUUID().toString()) // Unique ID
                 .username(registerRequest.getUsername())
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
                 .role(registerRequest.getRole())
                 .build());
 
         LoginRequest invalidLoginRequest = LoginRequest.builder()
-                .username("testuser")
+                .username(uniqueUsername)
                 .password("wrongpassword") // Invalid password
                 .build();
 
