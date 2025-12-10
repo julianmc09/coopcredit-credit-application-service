@@ -2,6 +2,7 @@ package com.riwi.io.coopcredit_credit_application_service.infrastructure.entry_p
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.riwi.io.coopcredit_credit_application_service.domain.entities.*;
+import com.riwi.io.coopcredit_credit_application_service.domain.entities.AffiliateStatus;
 import com.riwi.io.coopcredit_credit_application_service.domain.repositories.AffiliateRepositoryPort;
 import com.riwi.io.coopcredit_credit_application_service.domain.repositories.CreditApplicationRepositoryPort;
 import com.riwi.io.coopcredit_credit_application_service.domain.repositories.RiskEvaluationPort;
@@ -21,8 +22,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -41,7 +47,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@Testcontainers
 class CreditApplicationControllerIntegrationTest {
+
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
+            .withDatabaseName("testdb")
+            .withUsername("testuser")
+            .withPassword("testpass");
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -85,7 +105,25 @@ class CreditApplicationControllerIntegrationTest {
 
         User adminUser = User.builder().id(UUID.randomUUID().toString()).username(adminUsername).password(passwordEncoder.encode(password)).role(Role.ROLE_ADMIN).build();
         User analystUser = User.builder().id(UUID.randomUUID().toString()).username(analystUsername).password(passwordEncoder.encode(password)).role(Role.ROLE_ANALISTA).build();
-        User regularAffiliateUser = User.builder().id(UUID.randomUUID().toString()).username(affiliateUsername).password(passwordEncoder.encode(password)).role(Role.ROLE_AFILIADO).build();
+        
+        // Create affiliate first, then link it to the user
+        testAffiliate = Affiliate.builder()
+                .id(UUID.randomUUID().toString())
+                .document("DOC-" + UUID.randomUUID())
+                .name("Test Affiliate")
+                .salary(new BigDecimal("5000.00"))
+                .affiliationDate(LocalDate.now().minusMonths(12))
+                .status(AffiliateStatus.ACTIVE)
+                .build();
+        affiliateRepositoryPort.save(testAffiliate);
+        
+        User regularAffiliateUser = User.builder()
+                .id(UUID.randomUUID().toString())
+                .username(affiliateUsername)
+                .password(passwordEncoder.encode(password))
+                .role(Role.ROLE_AFILIADO)
+                .affiliateId(testAffiliate.getId()) // Link user to affiliate
+                .build();
 
         userRepositoryPort.save(adminUser);
         userRepositoryPort.save(analystUser);
@@ -98,17 +136,6 @@ class CreditApplicationControllerIntegrationTest {
         adminToken = jwtService.generateToken(adminUserDetails);
         analystToken = jwtService.generateToken(analystUserDetails);
         affiliateToken = jwtService.generateToken(affiliateUserDetails);
-
-        // 2. Create an affiliate for tests
-        testAffiliate = Affiliate.builder()
-                .id(UUID.randomUUID().toString())
-                .document("DOC-" + UUID.randomUUID())
-                .name("Test Affiliate")
-                .salary(new BigDecimal("5000.00"))
-                .affiliationDate(LocalDate.now().minusMonths(12))
-                .status(AffiliateStatus.ACTIVE)
-                .build();
-        affiliateRepositoryPort.save(testAffiliate);
 
         // 3. Prepare a request DTO for new credit application
         creditApplicationRequest = CreditApplicationRequest.builder()
