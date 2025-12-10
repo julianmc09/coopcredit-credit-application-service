@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement; // Import Sec
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; // Import PreAuthorize
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -26,6 +27,7 @@ public class AffiliateController {
     private final GetAffiliateUseCase getAffiliateUseCase;
     private final AffiliateRestMapper affiliateRestMapper;
 
+    @PreAuthorize("hasRole('ADMIN')") // Only ADMIN can register affiliates
     @PostMapping
     public ResponseEntity<AffiliateResponse> registerAffiliate(@Valid @RequestBody AffiliateRequest request) {
         var affiliate = registerAffiliateUseCase.registerAffiliate(
@@ -38,6 +40,7 @@ public class AffiliateController {
                 .body(affiliateRestMapper.toResponse(affiliate));
     }
 
+    @PreAuthorize("hasRole('ADMIN')") // Only ADMIN can update affiliates
     @PutMapping("/{id}")
     public ResponseEntity<AffiliateResponse> updateAffiliate(@PathVariable String id, @Valid @RequestBody AffiliateRequest request) {
         return updateAffiliateUseCase.updateAffiliate(
@@ -52,6 +55,7 @@ public class AffiliateController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALISTA')") // ADMIN and ANALYST can get affiliate by ID
     @GetMapping("/{id}")
     public ResponseEntity<AffiliateResponse> getAffiliateById(@PathVariable String id) {
         return getAffiliateUseCase.getAffiliateById(id)
@@ -60,6 +64,7 @@ public class AffiliateController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALISTA')") // ADMIN and ANALYST can get affiliate by document
     @GetMapping("/document/{document}")
     public ResponseEntity<AffiliateResponse> getAffiliateByDocument(@PathVariable String document) {
         return getAffiliateUseCase.getAffiliateByDocument(document)
@@ -68,6 +73,7 @@ public class AffiliateController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALISTA')") // ADMIN and ANALYST can get all affiliates
     @GetMapping
     public ResponseEntity<List<AffiliateResponse>> getAllAffiliates() {
         List<AffiliateResponse> affiliates = affiliateRestMapper.toResponseList(getAffiliateUseCase.getAllAffiliates());
