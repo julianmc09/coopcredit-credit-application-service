@@ -1,6 +1,7 @@
 package com.riwi.io.coopcredit_credit_application_service.infrastructure.configuration.security;
 
 import com.riwi.io.coopcredit_credit_application_service.infrastructure.configuration.security.jwt.JwtAuthenticationFilter;
+import io.micrometer.core.instrument.Counter;
 import jakarta.servlet.http.HttpServletResponse; // Import this
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
+    private final Counter authenticationFailuresCounter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -49,9 +51,11 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
-                        .authenticationEntryPoint((request, response, authException) ->
-                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")
-                        )
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // Record authentication failure metric
+                            authenticationFailuresCounter.increment();
+                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                        })
                 ); // Added custom AuthenticationEntryPoint
 
         return http.build();

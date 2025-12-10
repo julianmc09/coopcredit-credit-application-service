@@ -1,5 +1,8 @@
 package com.riwi.io.coopcredit_credit_application_service.infrastructure.entry_points.api.rest.handler;
 
+import io.micrometer.core.instrument.Counter;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -15,10 +18,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@RequiredArgsConstructor
+@Slf4j
 public class GlobalExceptionHandler {
+
+    private final Counter httpErrorsCounter;
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgumentException(IllegalArgumentException ex) {
+        httpErrorsCounter.increment();
+        log.warn("Illegal argument exception: {}", ex.getMessage());
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Invalid Argument");
         problemDetail.setType(URI.create("https://example.com/problems/invalid-argument"));
@@ -28,6 +37,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
+        httpErrorsCounter.increment();
+        log.warn("Validation error: {}", ex.getMessage());
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
         problemDetail.setTitle("Validation Error");
         problemDetail.setType(URI.create("https://example.com/problems/validation-error"));
@@ -43,6 +54,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        httpErrorsCounter.increment();
+        log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Data integrity violation: " + ex.getMostSpecificCause().getMessage());
         problemDetail.setTitle("Data Conflict");
         problemDetail.setType(URI.create("https://example.com/problems/data-conflict"));
@@ -52,6 +65,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ProblemDetail handleBadCredentialsException(BadCredentialsException ex) {
+        httpErrorsCounter.increment();
+        log.warn("Bad credentials: {}", ex.getMessage());
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
         problemDetail.setTitle("Unauthorized");
         problemDetail.setType(URI.create("https://example.com/problems/unauthorized"));
@@ -61,6 +76,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class) // New handler for AccessDeniedException
     public ProblemDetail handleAccessDeniedException(AccessDeniedException ex) {
+        httpErrorsCounter.increment();
+        log.warn("Access denied: {}", ex.getMessage());
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
         problemDetail.setTitle("Access Denied");
         problemDetail.setType(URI.create("https://example.com/problems/access-denied"));
@@ -70,12 +87,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGenericException(Exception ex) {
+        httpErrorsCounter.increment();
+        log.error("Unhandled exception: {}", ex.getMessage(), ex);
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
         problemDetail.setTitle("Internal Server Error");
         problemDetail.setType(URI.create("https://example.com/problems/internal-server-error"));
         problemDetail.setProperty("timestamp", Instant.now());
-        // Optionally, log the full exception for debugging, but don't expose sensitive details
-        // log.error("Unhandled exception: {}", ex.getMessage(), ex);
         return problemDetail;
     }
 }
