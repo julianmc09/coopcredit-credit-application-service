@@ -38,5 +38,6 @@ public class AffiliateEntity {
     private AffiliateStatus status;
 
     @OneToMany(mappedBy = "affiliate", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @org.hibernate.annotations.BatchSize(size = 10) // Optimize batch loading of credit applications
     private List<CreditApplicationEntity> creditApplications;
 }

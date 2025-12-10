@@ -1,6 +1,7 @@
 package com.riwi.io.coopcredit_credit_application_service.domain.repositories;
 
 import com.riwi.io.coopcredit_credit_application_service.domain.entities.CreditApplication;
+import com.riwi.io.coopcredit_credit_application_service.domain.entities.CreditApplicationStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +13,8 @@ public interface CreditApplicationRepositoryPort {
     Optional<CreditApplication> findById(String id);
 
     List<CreditApplication> findAll();
+
+    List<CreditApplication> findByStatus(CreditApplicationStatus status);
 
     void deleteById(String id);
 

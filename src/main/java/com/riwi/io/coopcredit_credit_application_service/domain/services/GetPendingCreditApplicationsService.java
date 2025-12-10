@@ -8,7 +8,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -18,8 +17,7 @@ public class GetPendingCreditApplicationsService implements GetPendingCreditAppl
 
     @Override
     public List<CreditApplication> getPendingCreditApplications() {
-        return creditApplicationRepositoryPort.findAll().stream()
-                .filter(app -> app.getStatus() == CreditApplicationStatus.PENDING)
-                .collect(Collectors.toList());
+        // Use optimized query with EntityGraph instead of filtering in memory
+        return creditApplicationRepositoryPort.findByStatus(CreditApplicationStatus.PENDING);
     }
 }

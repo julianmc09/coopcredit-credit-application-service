@@ -33,6 +33,11 @@ public class CreditApplicationJpaAdapter implements CreditApplicationRepositoryP
     }
 
     @Override
+    public List<CreditApplication> findByStatus(com.riwi.io.coopcredit_credit_application_service.domain.entities.CreditApplicationStatus status) {
+        return creditApplicationMapper.toDomainList(creditApplicationJpaRepository.findByStatus(status));
+    }
+
+    @Override
     public void deleteById(String id) {
         creditApplicationJpaRepository.deleteById(id);
     }
