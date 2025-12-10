@@ -14,6 +14,7 @@ public interface UserMapper {
     User toDomain(UserEntity entity);
 
     @Mapping(target = "role", ignore = true) // UserJpaAdapter sets the RoleEntity
+    @Mapping(source = "affiliateId", target = "affiliateId")
     UserEntity toEntity(User domain);
 
     List<User> toDomainList(List<UserEntity> entities);

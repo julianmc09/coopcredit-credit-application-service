@@ -25,4 +25,7 @@ public class UserEntity {
     @ManyToOne(fetch = FetchType.EAGER) // Eagerly fetch role as it's small and frequently needed
     @JoinColumn(name = "role_id", nullable = false)
     private RoleEntity role;
+
+    @Column(name = "affiliate_id")
+    private String affiliateId; // Link to affiliate for AFILIADO users
 }

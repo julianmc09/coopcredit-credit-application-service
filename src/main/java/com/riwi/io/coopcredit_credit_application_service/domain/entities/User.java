@@ -14,4 +14,5 @@ public class User {
     private String username;
     private String password;
     private Role role;
+    private String affiliateId; // Link to affiliate for AFILIADO users
 }
