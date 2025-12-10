@@ -28,9 +28,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -66,11 +68,14 @@ class CreditApplicationControllerIntegrationTest {
     private String affiliateToken;
     private Affiliate testAffiliate;
     private CreditApplicationRequest creditApplicationRequest;
+    private CreditApplication existingApprovedApplication;
+    private CreditApplication existingPendingApplication;
 
     @BeforeEach
     void setUp() {
         userRepositoryPort.deleteAll();
         affiliateRepositoryPort.deleteAll();
+        creditApplicationRepositoryPort.deleteAll(); // Ensure credit applications are also cleared
 
         // 1. Register users and generate tokens
         String adminUsername = "admin-" + UUID.randomUUID();
@@ -112,6 +117,27 @@ class CreditApplicationControllerIntegrationTest {
                 .term(24)
                 .proposedRate(new BigDecimal("0.05"))
                 .build();
+
+        // 4. Create some existing credit applications for GET tests
+        existingApprovedApplication = creditApplicationRepositoryPort.save(CreditApplication.builder()
+                .id(UUID.randomUUID().toString())
+                .affiliate(testAffiliate)
+                .requestedAmount(new BigDecimal("12000.00"))
+                .term(36)
+                .proposedRate(new BigDecimal("0.06"))
+                .applicationDate(LocalDate.now().minusDays(5))
+                .status(CreditApplicationStatus.APPROVED)
+                .build());
+
+        existingPendingApplication = creditApplicationRepositoryPort.save(CreditApplication.builder()
+                .id(UUID.randomUUID().toString())
+                .affiliate(testAffiliate)
+                .requestedAmount(new BigDecimal("8000.00"))
+                .term(12)
+                .proposedRate(new BigDecimal("0.07"))
+                .applicationDate(LocalDate.now().minusDays(2))
+                .status(CreditApplicationStatus.PENDING)
+                .build());
     }
 
     @Test
@@ -140,18 +166,7 @@ class CreditApplicationControllerIntegrationTest {
     @Test
     @DisplayName("Analyst should be able to evaluate a pending credit application")
     void analystShouldBeAbleToEvaluatePendingApplication() throws Exception {
-        // 1. Create a pending application
-        CreditApplication pendingApplication = creditApplicationRepositoryPort.save(CreditApplication.builder()
-                .id(UUID.randomUUID().toString())
-                .affiliate(testAffiliate)
-                .requestedAmount(new BigDecimal("10000.00"))
-                .term(24)
-                .proposedRate(new BigDecimal("0.05"))
-                .applicationDate(LocalDate.now())
-                .status(CreditApplicationStatus.PENDING)
-                .build());
-
-        // 2. Mock the external risk evaluation service
+        // Mock the external risk evaluation service
         RiskEvaluation lowRiskEvaluation = RiskEvaluation.builder()
                 .score(800)
                 .riskLevel("BAJO RIESGO")
@@ -159,12 +174,12 @@ class CreditApplicationControllerIntegrationTest {
                 .build();
         when(riskEvaluationPort.evaluate(any(), any(), anyInt())).thenReturn(lowRiskEvaluation);
 
-        // 3. Perform the evaluation
-        mockMvc.perform(post("/credit-applications/{id}/evaluate", pendingApplication.getId())
+        // Perform the evaluation
+        mockMvc.perform(post("/credit-applications/{id}/evaluate", existingPendingApplication.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + analystToken)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(pendingApplication.getId()))
+                .andExpect(jsonPath("$.id").value(existingPendingApplication.getId()))
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.riskEvaluation").exists())
                 .andExpect(jsonPath("$.riskEvaluation.score").value(800));
@@ -173,15 +188,124 @@ class CreditApplicationControllerIntegrationTest {
     @Test
     @DisplayName("Affiliate should not be able to evaluate a credit application")
     void affiliateShouldNotBeAbleToEvaluateApplication() throws Exception {
-        CreditApplication pendingApplication = creditApplicationRepositoryPort.save(CreditApplication.builder()
-                .id(UUID.randomUUID().toString())
-                .affiliate(testAffiliate)
-                .status(CreditApplicationStatus.PENDING)
-                .build());
-
-        mockMvc.perform(post("/credit-applications/{id}/evaluate", pendingApplication.getId())
+        mockMvc.perform(post("/credit-applications/{id}/evaluate", existingPendingApplication.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + affiliateToken)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Admin should be able to get any credit application by ID")
+    void adminShouldBeAbleToGetAnyCreditApplicationById() throws Exception {
+        mockMvc.perform(get("/credit-applications/{id}", existingApprovedApplication.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(existingApprovedApplication.getId()))
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+    }
+
+    @Test
+    @DisplayName("Analyst should be able to get any credit application by ID")
+    void analystShouldBeAbleToGetAnyCreditApplicationById() throws Exception {
+        mockMvc.perform(get("/credit-applications/{id}", existingPendingApplication.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + analystToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(existingPendingApplication.getId()))
+                .andExpect(jsonPath("$.status").value("PENDING"));
+    }
+
+    @Test
+    @DisplayName("Affiliate should be able to get their own credit application by ID")
+    void affiliateShouldBeAbleToGetTheirOwnCreditApplicationById() throws Exception {
+        // Create an application specifically for the testAffiliate
+        CreditApplication affiliateOwnedApplication = creditApplicationRepositoryPort.save(CreditApplication.builder()
+                .id(UUID.randomUUID().toString())
+                .affiliate(testAffiliate)
+                .requestedAmount(new BigDecimal("5000.00"))
+                .term(12)
+                .proposedRate(new BigDecimal("0.06"))
+                .applicationDate(LocalDate.now())
+                .status(CreditApplicationStatus.PENDING)
+                .build());
+
+        mockMvc.perform(get("/credit-applications/{id}", affiliateOwnedApplication.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + affiliateToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(affiliateOwnedApplication.getId()));
+    }
+
+    @Test
+    @DisplayName("Affiliate should not be able to get another affiliate's credit application by ID")
+    void affiliateShouldNotBeAbleToGetAnotherAffiliatesCreditApplicationById() throws Exception {
+        // Create another affiliate and their application
+        Affiliate otherAffiliate = Affiliate.builder()
+                .id(UUID.randomUUID().toString())
+                .document("OTHERDOC-" + UUID.randomUUID())
+                .name("Other Affiliate")
+                .salary(new BigDecimal("6000.00"))
+                .affiliationDate(LocalDate.now().minusMonths(5))
+                .status(AffiliateStatus.ACTIVE)
+                .build();
+        affiliateRepositoryPort.save(otherAffiliate);
+
+        CreditApplication otherAffiliateApplication = creditApplicationRepositoryPort.save(CreditApplication.builder()
+                .id(UUID.randomUUID().toString())
+                .affiliate(otherAffiliate)
+                .requestedAmount(new BigDecimal("15000.00"))
+                .term(36)
+                .proposedRate(new BigDecimal("0.04"))
+                .applicationDate(LocalDate.now())
+                .status(CreditApplicationStatus.APPROVED)
+                .build());
+
+        mockMvc.perform(get("/credit-applications/{id}", otherAffiliateApplication.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + affiliateToken)) // Affiliate trying to access other's app
+                .andExpect(status().isForbidden()); // 403 Forbidden
+    }
+
+    @Test
+    @DisplayName("Admin should be able to get all credit applications")
+    void adminShouldBeAbleToGetAllCreditApplications() throws Exception {
+        mockMvc.perform(get("/credit-applications")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2))) // Two applications created in setUp
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[1].id").exists());
+    }
+
+    @Test
+    @DisplayName("Analyst should not be able to get all credit applications")
+    void analystShouldNotBeAbleToGetAllCreditApplications() throws Exception {
+        mockMvc.perform(get("/credit-applications")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + analystToken))
+                .andExpect(status().isForbidden()); // 403 Forbidden
+    }
+
+    @Test
+    @DisplayName("Analyst should be able to get all pending credit applications")
+    void analystShouldBeAbleToGetAllPendingCreditApplications() throws Exception {
+        mockMvc.perform(get("/credit-applications/pending")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + analystToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1))) // Only existingPendingApplication is pending
+                .andExpect(jsonPath("$[0].id").value(existingPendingApplication.getId()))
+                .andExpect(jsonPath("$[0].status").value("PENDING"));
+    }
+
+    @Test
+    @DisplayName("Admin should not be able to get all pending credit applications")
+    void adminShouldNotBeAbleToGetAllPendingCreditApplications() throws Exception {
+        mockMvc.perform(get("/credit-applications/pending")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isForbidden()); // 403 Forbidden
+    }
+
+    @Test
+    @DisplayName("Affiliate should not be able to get all pending credit applications")
+    void affiliateShouldNotBeAbleToGetAllPendingCreditApplications() throws Exception {
+        mockMvc.perform(get("/credit-applications/pending")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + affiliateToken))
+                .andExpect(status().isForbidden()); // 403 Forbidden
     }
 }

@@ -14,4 +14,6 @@ public interface CreditApplicationRepositoryPort {
     List<CreditApplication> findAll();
 
     void deleteById(String id);
+
+    void deleteAll(); // Added this method
 }

@@ -36,4 +36,9 @@ public class CreditApplicationJpaAdapter implements CreditApplicationRepositoryP
     public void deleteById(String id) {
         creditApplicationJpaRepository.deleteById(id);
     }
+
+    @Override
+    public void deleteAll() {
+        creditApplicationJpaRepository.deleteAll();
+    }
 }
