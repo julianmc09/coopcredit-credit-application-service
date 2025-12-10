@@ -6,7 +6,9 @@ import com.riwi.io.coopcredit_credit_application_service.domain.entities.CreditA
 import com.riwi.io.coopcredit_credit_application_service.domain.entities.CreditApplicationStatus;
 import com.riwi.io.coopcredit_credit_application_service.domain.ports.in.RegisterCreditApplicationUseCase;
 import com.riwi.io.coopcredit_credit_application_service.domain.repositories.AffiliateRepositoryPort;
+import com.riwi.io.coopcredit_credit_application_service.domain.entities.RiskEvaluation;
 import com.riwi.io.coopcredit_credit_application_service.domain.repositories.CreditApplicationRepositoryPort;
+import com.riwi.io.coopcredit_credit_application_service.domain.repositories.RiskEvaluationPort;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,9 +22,11 @@ public class RegisterCreditApplicationService implements RegisterCreditApplicati
 
     private final AffiliateRepositoryPort affiliateRepositoryPort;
     private final CreditApplicationRepositoryPort creditApplicationRepositoryPort;
+    private final RiskEvaluationPort riskEvaluationPort;
 
     @Override
-    public CreditApplication registerCreditApplication(String affiliateId, BigDecimal requestedAmount, Integer term, BigDecimal proposedRate) {
+    public CreditApplication registerCreditApplication(String affiliateId, BigDecimal requestedAmount, Integer term,
+            BigDecimal proposedRate) {
         // 1. Find the affiliate
         Affiliate affiliate = affiliateRepositoryPort.findById(affiliateId)
                 .orElseThrow(() -> new IllegalArgumentException("Affiliate not found with ID: " + affiliateId));
@@ -32,7 +36,8 @@ public class RegisterCreditApplicationService implements RegisterCreditApplicati
             throw new IllegalArgumentException("Affiliate is not active and cannot apply for a credit.");
         }
 
-        // 3. Basic validations for the application (more complex validations will be in EvaluateCreditApplication)
+        // 3. Basic validations for the application (more complex validations will be in
+        // EvaluateCreditApplication)
         if (requestedAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Requested amount must be greater than zero.");
         }
@@ -43,7 +48,10 @@ public class RegisterCreditApplicationService implements RegisterCreditApplicati
             throw new IllegalArgumentException("Proposed rate must be greater than zero.");
         }
 
-        // 4. Create the credit application
+        // 4. Call Risk Evaluation
+        RiskEvaluation riskEvaluation = riskEvaluationPort.evaluate(affiliate.getDocument(), requestedAmount, term);
+
+        // 5. Create the credit application
         CreditApplication newApplication = CreditApplication.builder()
                 .id(UUID.randomUUID().toString())
                 .affiliate(affiliate)
@@ -52,6 +60,7 @@ public class RegisterCreditApplicationService implements RegisterCreditApplicati
                 .proposedRate(proposedRate)
                 .applicationDate(LocalDate.now())
                 .status(CreditApplicationStatus.PENDING)
+                .riskEvaluation(riskEvaluation)
                 .build();
 
         // 5. Save and return
