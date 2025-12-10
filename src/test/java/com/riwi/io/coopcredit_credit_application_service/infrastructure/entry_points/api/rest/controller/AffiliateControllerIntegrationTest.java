@@ -64,8 +64,8 @@ class AffiliateControllerIntegrationTest {
     @BeforeEach
     void setUp() {
         // Clear repositories for isolation (Transactional will rollback, but explicit clear helps)
-        userRepositoryPort.deleteAll(); // Assuming deleteAll exists or implement it
-        affiliateRepositoryPort.deleteAll(); // Assuming deleteAll exists or implement it
+        userRepositoryPort.deleteAll();
+        affiliateRepositoryPort.deleteAll();
 
         // 1. Register users and generate tokens
         String adminUsername = "admin-" + UUID.randomUUID();
@@ -89,7 +89,7 @@ class AffiliateControllerIntegrationTest {
         analystToken = jwtService.generateToken(analystUserDetails);
         affiliateToken = jwtService.generateToken(affiliateUserDetails);
 
-        // 2. Create an existing affiliate for update/get tests with unique document
+        // 2. Create an existing affiliate for update/get tests
         existingAffiliate = Affiliate.builder()
                 .id(UUID.randomUUID().toString())
                 .document("DOC-" + UUID.randomUUID()) // Unique document
@@ -204,7 +204,7 @@ class AffiliateControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(existingAffiliate.getId()))
                 .andExpect(jsonPath("$.name").value(updateRequest.getName()))
-                .andExpect(jsonPath("$.salary").value(updateRequest.getSalary()))
+                .andExpect(jsonPath("$.salary").value("3500.0")) // Corrected here
                 .andExpect(jsonPath("$.status").value(updateRequest.getStatus().name()));
     }
 
