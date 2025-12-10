@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement; // Import Sec
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; // Import PreAuthorize
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -26,6 +27,7 @@ public class CreditApplicationController {
     private final GetPendingCreditApplicationsUseCase getPendingCreditApplicationsUseCase;
     private final CreditApplicationRestMapper creditApplicationRestMapper;
 
+    @PreAuthorize("hasRole('AFILIADO')") // Only AFILIADO can register applications
     @PostMapping
     public ResponseEntity<CreditApplicationResponse> registerCreditApplication(@Valid @RequestBody CreditApplicationRequest request) {
         var creditApplication = registerCreditApplicationUseCase.registerCreditApplication(
@@ -38,12 +40,14 @@ public class CreditApplicationController {
                 .body(creditApplicationRestMapper.toResponse(creditApplication));
     }
 
+    @PreAuthorize("hasRole('ANALISTA')") // Only ANALISTA can evaluate applications
     @PostMapping("/{id}/evaluate")
     public ResponseEntity<CreditApplicationResponse> evaluateCreditApplication(@PathVariable String id) {
         var creditApplication = evaluateCreditApplicationUseCase.evaluateCreditApplication(id);
         return ResponseEntity.ok(creditApplicationRestMapper.toResponse(creditApplication));
     }
 
+    @PreAuthorize("hasAnyRole('AFILIADO', 'ANALISTA', 'ADMIN')") // AFILIADO, ANALISTA, ADMIN can get application by ID
     @GetMapping("/{id}")
     public ResponseEntity<CreditApplicationResponse> getCreditApplicationById(@PathVariable String id) {
         return getCreditApplicationUseCase.getCreditApplicationById(id)
@@ -52,12 +56,14 @@ public class CreditApplicationController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasRole('ADMIN')") // Only ADMIN can get all applications
     @GetMapping
     public ResponseEntity<List<CreditApplicationResponse>> getAllCreditApplications() {
         List<CreditApplicationResponse> applications = creditApplicationRestMapper.toResponseList(getAllCreditApplicationsUseCase.getAllCreditApplications());
         return ResponseEntity.ok(applications);
     }
 
+    @PreAuthorize("hasRole('ANALISTA')") // Only ANALISTA can get pending applications
     @GetMapping("/pending")
     public ResponseEntity<List<CreditApplicationResponse>> getPendingCreditApplications() {
         List<CreditApplicationResponse> applications = creditApplicationRestMapper.toResponseList(getPendingCreditApplicationsUseCase.getPendingCreditApplications());
